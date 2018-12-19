@@ -8,7 +8,7 @@ class LearningAgent(Agent):
     """ An agent that learns to drive in the Smartcab world.
         This is the object you will be modifying. """ 
 
-    def __init__(self, env, learning=False, epsilon=1.0, alpha=0.5):
+    def __init__(self, env, learning=False, epsilon=1.0, alpha=0.5, a=0.5):
         super(LearningAgent, self).__init__(env)     # Set the agent in the evironment 
         self.planner = RoutePlanner(self.env, self)  # Create a route planner
         self.valid_actions = self.env.valid_actions  # The set of valid actions
@@ -23,7 +23,8 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set any additional class parameters as needed
-        self.decay = 0.05
+        self.a = a
+        self.current_trial = 1
 
 
     def reset(self, destination=None, testing=False):
@@ -45,7 +46,7 @@ class LearningAgent(Agent):
             self.epsilon = 0
             self.alpha = 0
         else:
-            self.epsilon -= self.decay
+            self.epsilon = math.exp(-1 * self.a * self.current_trial)
 
         return None
 
@@ -69,7 +70,7 @@ class LearningAgent(Agent):
         # With the hand-engineered features, this learning process gets entirely negated.
         
         # Set 'state' as a tuple of relevant data for the agent        
-        state = (inputs['light'], inputs['oncoming'], inputs['left'], inputs['right'], waypoint)
+        state = (inputs['light'], inputs['oncoming'], inputs['left'], waypoint)
 
         return state
 
@@ -105,11 +106,13 @@ class LearningAgent(Agent):
 
         return
 
+
     def __highest_q_action(self, state):
         action_map = self.Q[state]
         highest_q = max(action_map.values())
         highest_q_actions = [i for i in action_map.keys() if action_map[i] == highest_q]
         return random.choice(highest_q_actions)
+
 
     def choose_action(self, state):
         """ The choose_action function is called when the agent is asked to choose
@@ -132,6 +135,8 @@ class LearningAgent(Agent):
         if self.learning:
             if random.random() > self.epsilon:
                 action = self.__highest_q_action(state)
+        
+        self.current_trial += 1
 
         return action
 
@@ -186,7 +191,7 @@ def run():
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
     # kwargs = {'learning': True}
-    agent = env.create_agent(LearningAgent, learning=True)
+    agent = env.create_agent(LearningAgent, learning=True, a=0.0005, alpha=0.2, epsilon=1.0)
     
     ##############
     # Follow the driving agent
@@ -201,14 +206,14 @@ def run():
     #   display      - set to False to disable the GUI if PyGame is enabled
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
-    sim = Simulator(env, log_metrics=True, update_delay=0.01)
+    sim = Simulator(env, log_metrics=True, update_delay=0.001, optimized=True)
     
     ##############
     # Run the simulator
     # Flags:
     #   tolerance  - epsilon tolerance before beginning testing, default is 0.05 
     #   n_test     - discrete number of testing trials to perform, default is 0
-    sim.run(n_test=10)
+    sim.run(n_test=20, tolerance=0.01)
 
 
 if __name__ == '__main__':
